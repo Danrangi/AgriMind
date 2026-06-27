@@ -236,8 +236,3 @@ This project is licensed under the MIT License.
 
 Built with ❤️ for innovation in agriculture and AI.
 
----
-
-## ⭐ Acknowledgment
-
-AgriMind was developed as a hackathon project to demonstrate how AI agents and machine learning can transform traditional farming practices into intelligent, data-driven systems.
