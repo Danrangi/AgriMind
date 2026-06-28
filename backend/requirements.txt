@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+langchain
+langchain-groq
+langchain-core
+requests
+joblib
+scikit-learn
+numpy
+python-dotenv
