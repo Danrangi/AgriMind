@@ -792,3 +792,16 @@ select.field-input {
   font-weight: 600;
   color: var(--terracotta);
 }
+
+/* --- ERROR BANNER --- */
+.error-banner {
+  background: #FDF2F0;
+  border: 1px solid #E8A89C;
+  border-left: 4px solid var(--terracotta);
+  border-radius: var(--radius-sm);
+  padding: 12px var(--space-2);
+  font-size: 0.875rem;
+  color: #8B3A2A;
+  margin-top: var(--space-2);
+  display: none;
+}

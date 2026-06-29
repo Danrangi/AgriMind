@@ -1,22 +1,31 @@
 // ============================================================
-// AgriMind — Dashboard Interactions
-// Soil type → internal NPK/pH mapping (same as original project)
-// API call to FastAPI backend (wired in Day 5)
+// AgriMind — Production Frontend
+// No demo data. All results come from the live backend.
+// API_BASE auto-detects: same origin in production,
+// localhost in local development.
 // ============================================================
 
-const API_BASE = 'http://localhost:8000';
+// Auto-detect backend URL:
+// - In production (GitHub Pages → Render): set RENDER_URL below
+// - In local dev (Codespace): falls back to localhost:8000
+const RENDER_URL = '';  // ← paste your Render URL here when deployed e.g. 'https://agrimind.onrender.com'
+const API_BASE = RENDER_URL || 'http://localhost:8000';
 
-// Soil type → NPK + pH mapping (from original project)
+// ============================================================
+// Soil type → NPK/pH mapping (mirrors backend exactly)
+// ============================================================
 const SOIL_PROFILES = {
-  sandy:  { N: 20,  P: 15,  K: 10,  ph: 5.5, rainfall: 60  },
-  clay:   { N: 40,  P: 30,  K: 35,  ph: 6.0, rainfall: 120 },
-  loamy:  { N: 60,  P: 50,  K: 50,  ph: 6.5, rainfall: 100 },
-  chalky: { N: 25,  P: 20,  K: 20,  ph: 7.5, rainfall: 70  },
-  peaty:  { N: 80,  P: 35,  K: 25,  ph: 4.5, rainfall: 150 },
-  silty:  { N: 55,  P: 45,  K: 40,  ph: 6.2, rainfall: 110 }
+  sandy:  { N: 20,  P: 15,  K: 10,  ph: 5.5, rainfall: 60,  label: 'Sandy Soil'  },
+  clay:   { N: 40,  P: 30,  K: 35,  ph: 6.0, rainfall: 120, label: 'Clay Soil'   },
+  loamy:  { N: 60,  P: 50,  K: 50,  ph: 6.5, rainfall: 100, label: 'Loamy Soil'  },
+  chalky: { N: 25,  P: 20,  K: 20,  ph: 7.5, rainfall: 70,  label: 'Chalky Soil' },
+  peaty:  { N: 80,  P: 35,  K: 25,  ph: 4.5, rainfall: 150, label: 'Peaty Soil'  },
+  silty:  { N: 55,  P: 45,  K: 40,  ph: 6.2, rainfall: 110, label: 'Silty Soil'  }
 };
 
-// --- SIDEBAR NAVIGATION ---
+// ============================================================
+// SIDEBAR NAVIGATION
+// ============================================================
 document.querySelectorAll('.menu-item').forEach(item => {
   item.addEventListener('click', () => {
     document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
@@ -24,10 +33,12 @@ document.querySelectorAll('.menu-item').forEach(item => {
   });
 });
 
-// --- SOIL SELECTION → show properties card ---
+// ============================================================
+// SOIL SELECTION → show properties card
+// ============================================================
 document.getElementById('soil').addEventListener('change', function () {
-  const val = this.value;
-  const card = document.getElementById('soilInfoCard');
+  const val   = this.value;
+  const card  = document.getElementById('soilInfoCard');
   const props = document.getElementById('soilProps');
 
   if (!val || !SOIL_PROFILES[val]) {
@@ -41,87 +52,102 @@ document.getElementById('soil').addEventListener('change', function () {
     <span class="soil-prop">P: ${p.P}</span>
     <span class="soil-prop">K: ${p.K}</span>
     <span class="soil-prop">pH: ${p.ph}</span>
-    <span class="soil-prop">Est. rainfall: ${p.rainfall}mm</span>
+    <span class="soil-prop">Est. rainfall: ${p.rainfall} mm</span>
   `;
   card.style.display = 'block';
 });
 
-// --- ANALYSE HANDLER ---
+// ============================================================
+// MAIN ANALYSE HANDLER
+// ============================================================
 async function handleAnalyze() {
   const location = document.getElementById('location').value.trim();
   const soil     = document.getElementById('soil').value;
 
-  if (!location) { alert('Please enter your city or location.'); return; }
-  if (!soil)     { alert('Please select your soil type.'); return; }
+  // Validation
+  if (!location) {
+    showError('Please enter your city or location.');
+    return;
+  }
+  if (!soil) {
+    showError('Please select your soil type.');
+    return;
+  }
 
-  const soilProfile = SOIL_PROFILES[soil];
-  const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true;
-  btn.querySelector('.btn-text').style.display = 'none';
-  btn.querySelector('.btn-loader').style.display = 'inline';
+  // Hide any previous error or results
+  hideError();
+  hideResults();
+
+  // Set loading state
+  setLoading(true);
 
   try {
     const response = await fetch(`${API_BASE}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        location,
-        soil_type: soil,
-        N:        soilProfile.N,
-        P:        soilProfile.P,
-        K:        soilProfile.K,
-        ph:       soilProfile.ph,
-        rainfall: soilProfile.rainfall
+        location:  location,
+        soil_type: soil
       })
     });
 
-    if (!response.ok) throw new Error('Backend error');
+    // Handle HTTP errors from backend
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error (${response.status}). Please try again.`);
+    }
+
     const data = await response.json();
     renderResults(data);
 
   } catch (err) {
-    // Demo fallback while backend is not yet running
-    console.warn('Backend not connected — showing demo result.');
-    renderResults(getDemoResult(location, soil));
+    // Network error or backend error — show to user clearly
+    if (err.message === 'Failed to fetch') {
+      showError('Could not reach the AgriMind server. Please check your connection and try again.');
+    } else {
+      showError(err.message);
+    }
   } finally {
-    btn.disabled = false;
-    btn.querySelector('.btn-text').style.display = 'inline';
-    btn.querySelector('.btn-loader').style.display = 'none';
+    setLoading(false);
   }
 }
 
-// --- RENDER RESULTS ---
+// ============================================================
+// RENDER RESULTS — all data from live backend
+// ============================================================
 function renderResults(data) {
   const resultsArea = document.getElementById('resultsArea');
   resultsArea.style.display = 'flex';
   setTimeout(() => resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
-  // Crop
+  // --- Crop card ---
   document.getElementById('cropName').textContent       = capitalize(data.crop);
   document.getElementById('cropReason').textContent     = data.crop_reason;
   document.getElementById('cropConfidence').textContent = `${data.confidence}% match`;
 
   const metaEl = document.getElementById('cropMeta');
-  metaEl.innerHTML = (data.crop_tags || []).map(t => `<span class="crop-tag">${t}</span>`).join('');
+  metaEl.innerHTML = (data.crop_tags || [])
+    .map(t => `<span class="crop-tag">${t}</span>`)
+    .join('');
 
-  // Weather stats
-  document.getElementById('avgTemp').textContent        = `${data.weather.avg_temp}°C`;
-  document.getElementById('avgHumidity').textContent    = `${data.weather.avg_humidity}%`;
+  // --- Weather stats ---
+  document.getElementById('avgTemp').textContent         = `${data.weather.avg_temp}°C`;
+  document.getElementById('avgHumidity').textContent     = `${data.weather.avg_humidity}%`;
   document.getElementById('dominantWeather').textContent = data.weather.dominant;
 
-  // Weather breakdown (Clear/Clouds/Rain counts — like original project table)
+  // --- Weather breakdown bars ---
   const breakdown = document.getElementById('weatherBreakdown');
   breakdown.innerHTML = (data.weather.breakdown || []).map(b => `
     <div class="breakdown-row">
       <span class="breakdown-label">${b.condition}</span>
       <div class="breakdown-bar-wrap">
-        <div class="breakdown-bar" style="width:${b.pct}%"></div>
+        <div class="breakdown-bar" style="width: ${b.pct}%"></div>
       </div>
       <span class="breakdown-count">${b.days} days</span>
     </div>
   `).join('');
 
-  // Forecast strip (first 7 days)
+  // --- 7-day forecast strip ---
   const strip = document.getElementById('forecastStrip');
   strip.innerHTML = (data.weather.forecast || []).slice(0, 7).map(day => `
     <div class="forecast-day">
@@ -131,7 +157,7 @@ function renderResults(data) {
     </div>
   `).join('');
 
-  // Irrigation
+  // --- Irrigation ---
   document.getElementById('levelFill').style.width  = `${data.irrigation.level_pct}%`;
   document.getElementById('levelLabel').textContent = data.irrigation.label;
 
@@ -141,9 +167,11 @@ function renderResults(data) {
     : '';
 
   const tipsEl = document.getElementById('irrigationTips');
-  tipsEl.innerHTML = (data.irrigation.tips || []).map(t => `<li>${t}</li>`).join('');
+  tipsEl.innerHTML = (data.irrigation.tips || [])
+    .map(t => `<li>${t}</li>`)
+    .join('');
 
-  // Reasoning steps
+  // --- Agent reasoning steps ---
   const stepsEl = document.getElementById('reasoningSteps');
   stepsEl.innerHTML = (data.reasoning_steps || []).map((step, i) => `
     <div class="reasoning-step">
@@ -153,58 +181,43 @@ function renderResults(data) {
   `).join('');
 }
 
-// --- DEMO FALLBACK DATA ---
-function getDemoResult(location, soil) {
-  return {
-    crop: 'Maize',
-    crop_reason: `Based on your ${soil} soil profile and the 30-day weather forecast for ${location}, maize is the most suitable crop. The projected temperature and humidity levels align well with maize growth requirements, and your soil composition provides adequate nutrients.`,
-    confidence: 89,
-    crop_tags: ['High-yield potential', capitalize(soil) + ' soil compatible', 'Moderate water needs'],
-    weather: {
-      avg_temp: '28.3',
-      avg_humidity: '65',
-      dominant: 'Clouds',
-      breakdown: [
-        { condition: 'Clouds', days: 18, pct: 60 },
-        { condition: 'Clear',  days: 8,  pct: 27 },
-        { condition: 'Rain',   days: 4,  pct: 13 }
-      ],
-      forecast: [
-        { label: 'Mon', temp: 29, condition: 'clouds' },
-        { label: 'Tue', temp: 27, condition: 'clear'  },
-        { label: 'Wed', temp: 30, condition: 'clouds' },
-        { label: 'Thu', temp: 28, condition: 'rain'   },
-        { label: 'Fri', temp: 26, condition: 'clouds' },
-        { label: 'Sat', temp: 25, condition: 'clear'  },
-        { label: 'Sun', temp: 27, condition: 'clouds' }
-      ]
-    },
-    irrigation: {
-      level_pct: 45,
-      label: 'Light irrigation recommended',
-      amount: '15 litres per square metre, every 3 days',
-      tips: [
-        'Forecast shows mostly cloudy weather — moderate evaporation expected.',
-        'Water in the early morning to reduce evaporation loss.',
-        'Reduce watering on days where rain is predicted.',
-        'Monitor soil moisture every 2 days during the first 2 weeks of planting.'
-      ]
-    },
-    reasoning_steps: [
-      `Fetched live weather data for ${location} using OpenWeatherMap API.`,
-      'Retrieved current temperature and humidity to seed the 30-day forecast model.',
-      'Ran weather prediction model — classified each of the next 30 days as Clear, Clouds, or Rain.',
-      `Computed 30-day averages: temperature ${28.3}°C, humidity ${65}%, dominant condition: Clouds.`,
-      `Mapped ${soil} soil type to N/P/K/pH profile internally.`,
-      'Fed soil profile + weather averages into the crop recommendation model (Random Forest).',
-      'Model evaluated 22 crop types and returned Maize with 89% confidence.',
-      'Computed irrigation advice based on projected rainfall vs. expected crop water needs.',
-      'Assembled and returned the complete farming plan.'
-    ]
-  };
+// ============================================================
+// UI STATE HELPERS
+// ============================================================
+function setLoading(on) {
+  const btn     = document.getElementById('analyzeBtn');
+  const btnText = btn.querySelector('.btn-text');
+  const loader  = btn.querySelector('.btn-loader');
+
+  btn.disabled       = on;
+  btnText.style.display = on ? 'none'   : 'inline';
+  loader.style.display  = on ? 'inline' : 'none';
 }
 
-// --- UTILITIES ---
+function showError(message) {
+  let errorEl = document.getElementById('errorBanner');
+  if (!errorEl) {
+    errorEl = document.createElement('div');
+    errorEl.id = 'errorBanner';
+    errorEl.className = 'error-banner';
+    document.querySelector('.form-action').after(errorEl);
+  }
+  errorEl.textContent = message;
+  errorEl.style.display = 'block';
+}
+
+function hideError() {
+  const errorEl = document.getElementById('errorBanner');
+  if (errorEl) errorEl.style.display = 'none';
+}
+
+function hideResults() {
+  document.getElementById('resultsArea').style.display = 'none';
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
 function capitalize(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -212,8 +225,8 @@ function capitalize(str) {
 
 function getWeatherIcon(condition) {
   const c = (condition || '').toLowerCase();
-  if (c.includes('rain'))   return '🌧';
-  if (c.includes('cloud'))  return '☁';
-  if (c.includes('clear'))  return '☀';
+  if (c.includes('rain'))  return '🌧';
+  if (c.includes('cloud')) return '☁';
+  if (c.includes('clear')) return '☀';
   return '🌤';
 }
