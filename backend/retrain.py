@@ -1,8 +1,3 @@
-# ============================================================
-# AgriMind — Retrain models in current environment
-# Run this once to fix sklearn version mismatch
-# Usage: python retrain.py
-# ============================================================
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -12,7 +7,7 @@ from sklearn.metrics import accuracy_score
 import joblib
 import os
 
-print("=== AgriMind Model Retraining ===\n")
+print(" AgriMind Model Retraining \n")
 
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
