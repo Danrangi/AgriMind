@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: agrimind-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: OPENWEATHER_BASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

@@ -14,15 +14,15 @@ MODEL_DIR = os.path.join(BASE_DIR, "models")
 
 # Look for dataset in common locations
 for candidate in [
-    os.path.join(BASE_DIR, "../crop_recommendation.csv"),
-    os.path.join(BASE_DIR, "crop_recommendation.csv"),
-    os.path.expanduser("~/crop_recommendation.csv"),
+    os.path.join(BASE_DIR, "../Crop_recommendation.csv"),
+    os.path.join(BASE_DIR, "Crop_recommendation.csv"),
+    os.path.expanduser("~/Crop_recommendation.csv"),
 ]:
     if os.path.exists(candidate):
         DATA_PATH = candidate
         break
 else:
-    print("ERROR: crop_recommendation.csv not found.")
+    print("ERROR: Crop_recommendation.csv not found.")
     print("Place it in the AgriMind folder and run again.")
     exit(1)
 
