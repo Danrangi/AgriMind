@@ -805,3 +805,105 @@ select.field-input {
   margin-top: var(--space-2);
   display: none;
 }
+
+/* --- SECONDARY BUTTON (auto-detect) --- */
+.btn-secondary {
+  padding: 10px var(--space-3);
+  background: var(--white);
+  color: var(--olive);
+  border: 1px solid var(--olive);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 200ms ease, transform 200ms ease;
+  align-self: flex-start;
+}
+
+.btn-secondary:hover {
+  background: rgba(85, 107, 47, 0.08);
+  transform: translateY(-2px);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- ALTERNATIVES GRID --- */
+.alternatives-section {
+  margin-top: -8px;
+}
+
+.alternatives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.alt-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.alt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.alt-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.alt-crop-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--brown);
+  text-transform: capitalize;
+}
+
+.alt-confidence {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--olive);
+  background: rgba(85, 107, 47, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.alt-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alt-tag {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* --- STANDALONE IRRIGATION PANEL --- */
+.irrigation-panel-standalone {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+  width: 100%;
+}
+
+.irrigation-current {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
