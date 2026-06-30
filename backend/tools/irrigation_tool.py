@@ -1,27 +1,27 @@
 # ============================================================
 # AgriMind — Irrigation Tool
 # Rule-based logic (same approach as original project)
-# Uses temperature, humidity, rain_days to compute advice
+# Works standalone (no crop) or combined with crop recommendation
 # ============================================================
 
 
-def get_irrigation_advice(weather: dict, crop: str) -> dict:
+def get_irrigation_advice(weather: dict, crop: str = "general") -> dict:
     """
     Rule-based irrigation logic based on:
     - Average temperature
     - Average humidity
     - Number of rainy days in 30-day forecast
 
-    Returns label, level_pct (for progress bar), amount, and tips.
+    `crop` is optional — used only for messaging context,
+    not required for the core logic. This keeps the function
+    usable standalone (matches original app's independent
+    irrigation tab) or combined with crop recommendation.
     """
 
     temp      = weather["avg_temp"]
     humidity  = weather["avg_humidity"]
     rain_days = weather["rain_days"]
 
-    # --- Core rules (from original project logic) ---
-
-    # Heavy rain expected → minimal irrigation
     if rain_days >= 15:
         return {
             "label":     "Minimal irrigation needed",
@@ -35,7 +35,6 @@ def get_irrigation_advice(weather: dict, crop: str) -> dict:
             ]
         }
 
-    # Hot and dry → heavy irrigation
     if temp >= 32 and humidity < 40:
         return {
             "label":     "Heavy irrigation required",
@@ -49,7 +48,6 @@ def get_irrigation_advice(weather: dict, crop: str) -> dict:
             ]
         }
 
-    # Warm and moderately dry → moderate irrigation
     if temp >= 28 and humidity < 55:
         return {
             "label":     "Moderate irrigation recommended",
@@ -63,7 +61,6 @@ def get_irrigation_advice(weather: dict, crop: str) -> dict:
             ]
         }
 
-    # Cool and humid → light irrigation
     if temp < 24 or humidity >= 70:
         return {
             "label":     "Light irrigation needed",
@@ -77,7 +74,6 @@ def get_irrigation_advice(weather: dict, crop: str) -> dict:
             ]
         }
 
-    # Default — balanced conditions
     return {
         "label":     "Standard irrigation recommended",
         "level_pct": 45,
