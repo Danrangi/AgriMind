@@ -1,12 +1,9 @@
 // ============================================================
-// AgriMind — Production Frontend
-// Three modes: dashboard / crop (both use /analyze),
-// irrigation (uses /irrigation + /detect-location)
-// No demo data. All results come from the live backend.
+// AgriMind — Production JS
+// All data from live Render backend. Zero mock data.
 // ============================================================
 
-const RENDER_URL = 'https://agrimind-backend-5kzh.onrender.com';
-const API_BASE = RENDER_URL || 'http://localhost:8000';
+const API_BASE = 'https://agrimind-backend-5kzh.onrender.com';
 
 const SOIL_PROFILES = {
   sandy:  { N: 20,  P: 15,  K: 10,  ph: 5.5, rainfall: 60  },
@@ -17,89 +14,100 @@ const SOIL_PROFILES = {
   silty:  { N: 55,  P: 45,  K: 40,  ph: 6.2, rainfall: 110 }
 };
 
-const MODE_CONTENT = {
-  dashboard: {
-    eyebrow: 'Smart Farming, Simplified',
-    title:   'What will you grow today?',
-    sub:     'Tell us your location and soil type. AgriMind will fetch live weather data, forecast the next 30 days, and return your complete farming plan — crop, weather, and irrigation — in one place.'
-  },
-  crop: {
-    eyebrow: 'Crop Recommendation',
-    title:   'Find your best crop',
-    sub:     'AgriMind analyses your soil and 30-day weather forecast to recommend the most suitable crop, plus four close alternatives.'
-  },
-  irrigation: {
-    eyebrow: 'Irrigation Advice',
-    title:   'How much water does your farm need?',
-    sub:     'Get instant watering advice based on real-time weather — no soil type required.'
-  }
+// Crop photo mapping using Unsplash
+const CROP_PHOTOS = {
+  rice:        'https://images.unsplash.com/photo-1536054945547-8a6c8b9dba81?w=600&q=80',
+  maize:       'https://images.unsplash.com/photo-1507637379087-515718ca7c58?w=600&q=80',
+  chickpea:    'https://images.unsplash.com/photo-1615485500704-8e990f9900f7?w=600&q=80',
+  kidneybeans: 'https://images.unsplash.com/photo-1627485937980-221c88ac04f9?w=600&q=80',
+  pigeonpeas:  'https://images.unsplash.com/photo-1592994711654-21d9f1a74e47?w=600&q=80',
+  mothbeans:   'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=600&q=80',
+  mungbean:    'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=600&q=80',
+  blackgram:   'https://images.unsplash.com/photo-1515543237350-b3eea1ec8082?w=600&q=80',
+  lentil:      'https://images.unsplash.com/photo-1548366086-7f1b76106622?w=600&q=80',
+  pomegranate: 'https://images.unsplash.com/photo-1615485925600-97237c4fc1ec?w=600&q=80',
+  banana:      'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&q=80',
+  mango:       'https://images.unsplash.com/photo-1553279768-865429fa0078?w=600&q=80',
+  grapes:      'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=600&q=80',
+  watermelon:  'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?w=600&q=80',
+  muskmelon:   'https://images.unsplash.com/photo-1571575173927-4dfa3c1d0c35?w=600&q=80',
+  apple:       'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=600&q=80',
+  orange:      'https://images.unsplash.com/photo-1580052614034-c55d20bfee3b?w=600&q=80',
+  papaya:      'https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?w=600&q=80',
+  coconut:     'https://images.unsplash.com/photo-1546636889-ba9fdd63583e?w=600&q=80',
+  cotton:      'https://images.unsplash.com/photo-1603565816030-6b389eeb23cb?w=600&q=80',
+  jute:        'https://images.unsplash.com/photo-1599420186946-7b6fb4e297f0?w=600&q=80',
+  coffee:      'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600&q=80',
 };
 
-let currentMode = 'dashboard';
+const CROP_EMOJIS = {
+  rice:'🌾', maize:'🌽', chickpea:'🫘', kidneybeans:'🫘', pigeonpeas:'🫛',
+  mothbeans:'🌿', mungbean:'🌿', blackgram:'🫘', lentil:'🫘',
+  pomegranate:'🍎', banana:'🍌', mango:'🥭', grapes:'🍇',
+  watermelon:'🍉', muskmelon:'🍈', apple:'🍎', orange:'🍊',
+  papaya:'🍐', coconut:'🥥', cotton:'🌸', jute:'🌿', coffee:'☕',
+};
 
 // ============================================================
-// MODE SWITCHING
+// PAGE NAVIGATION
 // ============================================================
-function switchMode(mode) {
-  currentMode = mode;
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
 
-  document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-  document.querySelector(`.menu-item[data-mode="${mode}"]`).classList.add('active');
+  document.querySelectorAll('.nav-link, .bottom-nav__item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
 
-  const content = MODE_CONTENT[mode];
-  document.getElementById('modeEyebrow').textContent = content.eyebrow;
-  document.getElementById('modeTitle').textContent    = content.title;
-  document.getElementById('modeSub').textContent      = content.sub;
-
-  hideError();
-  document.getElementById('resultsArea').style.display = 'none';
-  document.getElementById('irrigationResultsArea').style.display = 'none';
-
-  if (mode === 'irrigation') {
-    document.getElementById('fullForm').style.display = 'none';
-    document.getElementById('irrigationForm').style.display = 'block';
-  } else {
-    document.getElementById('fullForm').style.display = 'block';
-    document.getElementById('irrigationForm').style.display = 'none';
-  }
+  window.scrollTo(0, 0);
 }
 
 // ============================================================
-// SOIL SELECTION → show properties card
+// CROP RECOMMENDATION FLOW
 // ============================================================
-document.getElementById('soil').addEventListener('change', function () {
-  const val   = this.value;
-  const card  = document.getElementById('soilInfoCard');
-  const props = document.getElementById('soilProps');
+async function handleCropAnalyze() {
+  const location = document.getElementById('cropLocation').value.trim();
+  const soil     = document.getElementById('cropSoil').value;
 
-  if (!val || !SOIL_PROFILES[val]) {
-    card.style.display = 'none';
-    return;
-  }
-  const p = SOIL_PROFILES[val];
-  props.innerHTML = `
-    <span class="soil-prop">N: ${p.N}</span>
-    <span class="soil-prop">P: ${p.P}</span>
-    <span class="soil-prop">K: ${p.K}</span>
-    <span class="soil-prop">pH: ${p.ph}</span>
-    <span class="soil-prop">Est. rainfall: ${p.rainfall} mm</span>
-  `;
-  card.style.display = 'block';
-});
+  hideError('cropError');
+  if (!location) { showError('cropError', 'Please enter your city or town.'); return; }
+  if (!soil)     { showError('cropError', 'Please select your soil type.'); return; }
 
-// ============================================================
-// FULL ANALYZE (Dashboard + Crop Recommendation modes)
-// ============================================================
-async function handleAnalyze() {
-  const location = document.getElementById('location').value.trim();
-  const soil     = document.getElementById('soil').value;
+  // Show step 2 (analyzing screen)
+  document.getElementById('crop-step1').style.display = 'none';
+  document.getElementById('crop-step2').style.display = 'block';
+  document.getElementById('crop-step3').style.display = 'none';
 
-  if (!location) { showError('Please enter your city or location.'); return; }
-  if (!soil)     { showError('Please select your soil type.'); return; }
+  // Animate reasoning trail steps
+  const trailSteps = [
+    'Fetching 30-day weather forecast for your location...',
+    `Analysing crop compatibility for ${soil} soil...`,
+    'Calculating estimated water requirements...',
+    'Finalising top recommendations with confidence scores...'
+  ];
+  const trail = document.getElementById('reasoningTrail');
+  trail.innerHTML = trailSteps.map((text, i) => `
+    <div class="reasoning-trail__item" id="trail-${i}">
+      <svg class="icon-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/></svg>
+      ${text}
+    </div>
+  `).join('');
 
-  hideError();
-  document.getElementById('resultsArea').style.display = 'none';
-  setBtnLoading('analyzeBtn', true);
+  // Reveal steps one by one
+  const delays = [300, 1200, 2400, 3600];
+  delays.forEach((delay, i) => {
+    setTimeout(() => {
+      const el = document.getElementById(`trail-${i}`);
+      if (el) {
+        el.classList.add('visible');
+        // Mark previous as checked
+        if (i > 0) {
+          const prev = document.getElementById(`trail-${i-1}`);
+          if (prev) prev.querySelector('svg').outerHTML = `<svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+        }
+      }
+    }, delay);
+  });
 
   try {
     const response = await fetch(`${API_BASE}/analyze`, {
@@ -110,32 +118,136 @@ async function handleAnalyze() {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || `Server error (${response.status}). Please try again.`);
+      throw new Error(err.detail || `Server error (${response.status}).`);
     }
 
     const data = await response.json();
-    renderFullResults(data);
+
+    // Wait for trail animation to finish before showing results
+    setTimeout(() => renderCropResults(data, location, soil), 4200);
 
   } catch (err) {
-    showError(err.message === 'Failed to fetch'
-      ? 'Could not reach the AgriMind server. Please check your connection and try again.'
-      : err.message);
-  } finally {
-    setBtnLoading('analyzeBtn', false);
+    setTimeout(() => {
+      document.getElementById('crop-step2').style.display = 'none';
+      document.getElementById('crop-step1').style.display = 'block';
+      showError('cropError', err.message === 'Failed to fetch'
+        ? 'Could not reach the AgriMind server. Please check your connection.'
+        : err.message);
+    }, 1000);
   }
 }
 
+function renderCropResults(data, location, soil) {
+  document.getElementById('crop-step2').style.display = 'none';
+  document.getElementById('crop-step3').style.display = 'block';
+
+  const crop = data.crop.toLowerCase();
+
+  // Primary crop card
+  const img = document.getElementById('cropResultImg');
+  const photo = CROP_PHOTOS[crop];
+  if (photo) {
+    img.src = photo;
+    img.alt = data.crop;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+    document.querySelector('.crop-result-img-wrap').innerHTML =
+      `<div style="height:100%;background:var(--green-100);display:flex;align-items:center;justify-content:center;font-size:3rem;">${CROP_EMOJIS[crop] || '🌱'}</div><span class="crop-top-badge">Top Match</span>`;
+  }
+
+  document.getElementById('cropResultName').textContent = capitalize(data.crop);
+  document.getElementById('cropResultConf').textContent = `${data.confidence}%`;
+  document.getElementById('cropResultReason').textContent = data.crop_reason;
+
+  // Weather big numbers
+  const bd = data.weather.breakdown || [];
+  const clearDays  = (bd.find(b => b.condition === 'Clear')  || {}).days || 0;
+  const cloudDays  = (bd.find(b => b.condition === 'Clouds') || {}).days || 0;
+  const rainDays   = (bd.find(b => b.condition === 'Rain')   || {}).days || 0;
+  document.getElementById('weatherBigNums').innerHTML = `
+    <div class="weather-big-num">
+      <span class="weather-big-num__val weather-big-num__val--sun">${clearDays}</span>
+      <span class="weather-big-num__label">Clear</span>
+    </div>
+    <div class="weather-big-num">
+      <span class="weather-big-num__val weather-big-num__val--cloud">${cloudDays}</span>
+      <span class="weather-big-num__label">Cloudy</span>
+    </div>
+    <div class="weather-big-num">
+      <span class="weather-big-num__val weather-big-num__val--rain">${rainDays}</span>
+      <span class="weather-big-num__label">Rainy</span>
+    </div>
+  `;
+
+  // 7-day strip
+  document.getElementById('cropForecastStrip').innerHTML =
+    (data.weather.forecast || []).slice(0, 7).map(day => `
+      <div class="forecast-day">
+        <span class="forecast-day__label">${day.label}</span>
+        <span class="forecast-day__icon">${getWeatherIcon(day.condition)}</span>
+        <span class="forecast-day__temp">${Math.round(day.temp)}°</span>
+      </div>
+    `).join('');
+
+  // Irrigation amount block
+  const irr = data.irrigation;
+  document.getElementById('irrigationAmountBlock').innerHTML = `
+    <div class="irrigation-amount-badge">${irr.amount.split(' ').slice(0,2).join(' ')}</div>
+    <div class="irrigation-amount-text">
+      <p class="irrigation-amount-title">${irr.label}</p>
+      <p>${irr.amount}</p>
+    </div>
+  `;
+
+  document.getElementById('cropIrrigationTips').innerHTML =
+    (irr.tips || []).map(t => `<li>${t}</li>`).join('');
+
+  // Alternatives grid
+  document.getElementById('altGrid').innerHTML =
+    (data.alternatives || []).map(alt => {
+      const altKey = alt.crop.toLowerCase();
+      const altPhoto = CROP_PHOTOS[altKey];
+      const imgBlock = altPhoto
+        ? `<div class="alt-card__img"><img src="${altPhoto}" alt="${alt.crop}" /></div>`
+        : `<div class="alt-card__img--placeholder">${CROP_EMOJIS[altKey] || '🌱'}</div>`;
+      return `
+        <div class="alt-card">
+          ${imgBlock}
+          <div class="alt-card__body">
+            <div class="alt-card__name">${capitalize(alt.crop)}</div>
+            <div class="alt-card__bar-wrap">
+              <div class="alt-card__bar"><div class="alt-card__bar-fill" style="width:${alt.confidence}%"></div></div>
+              <span class="alt-card__conf">${alt.confidence}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  document.getElementById('crop-step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetCrop() {
+  document.getElementById('crop-step1').style.display = 'block';
+  document.getElementById('crop-step2').style.display = 'none';
+  document.getElementById('crop-step3').style.display = 'none';
+  document.getElementById('cropLocation').value = '';
+  document.getElementById('cropSoil').value = '';
+  hideError('cropError');
+  window.scrollTo(0, 0);
+}
+
 // ============================================================
-// IRRIGATION-ONLY (Irrigation Advice mode)
+// IRRIGATION FLOW
 // ============================================================
 async function handleIrrigationOnly() {
-  const location = document.getElementById('irrigationLocation').value.trim();
+  const location = document.getElementById('irrLocation').value.trim();
+  hideError('irrError');
+  if (!location) { showError('irrError', 'Please enter your city or use auto-detect.'); return; }
 
-  if (!location) { showError('Please enter your city or use auto-detect.'); return; }
-
-  hideError();
-  document.getElementById('irrigationResultsArea').style.display = 'none';
-  setBtnLoading('irrigationBtn', true);
+  setBtnLoading('irrBtn', true);
+  document.getElementById('irr-results').style.display = 'none';
 
   try {
     const response = await fetch(`${API_BASE}/irrigation`, {
@@ -146,173 +258,95 @@ async function handleIrrigationOnly() {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || `Server error (${response.status}). Please try again.`);
+      throw new Error(err.detail || `Server error (${response.status}).`);
     }
 
     const data = await response.json();
-    renderIrrigationResults(data);
+    renderIrrigationResults(data, location);
 
   } catch (err) {
-    showError(err.message === 'Failed to fetch'
-      ? 'Could not reach the AgriMind server. Please check your connection and try again.'
+    showError('irrError', err.message === 'Failed to fetch'
+      ? 'Could not reach the AgriMind server. Please check your connection.'
       : err.message);
   } finally {
-    setBtnLoading('irrigationBtn', false);
+    setBtnLoading('irrBtn', false);
   }
 }
 
-// ============================================================
-// AUTO-DETECT LOCATION
-// ============================================================
 async function handleDetectLocation() {
-  hideError();
   setBtnLoading('detectBtn', true);
+  hideError('irrError');
 
   try {
     const response = await fetch(`${API_BASE}/detect-location`);
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || 'Could not detect your location.');
-    }
-
+    if (!response.ok) throw new Error('Could not detect your location.');
     const data = await response.json();
-    document.getElementById('irrigationLocation').value = data.city;
-
+    document.getElementById('irrLocation').value = data.city;
   } catch (err) {
-    showError(err.message === 'Failed to fetch'
-      ? 'Could not reach the AgriMind server.'
-      : err.message);
+    showError('irrError', err.message);
   } finally {
     setBtnLoading('detectBtn', false);
   }
 }
 
-// ============================================================
-// RENDER — FULL RESULTS (Dashboard / Crop modes)
-// ============================================================
-function renderFullResults(data) {
-  const resultsArea = document.getElementById('resultsArea');
-  resultsArea.style.display = 'flex';
-  setTimeout(() => resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+function renderIrrigationResults(data, location) {
+  document.getElementById('irrHeroLocation').textContent = `📍 ${location}`;
+  document.getElementById('irrHeroTemp').textContent     = `${Math.round(data.current.temp)}°`;
+  document.getElementById('irrHeroCondition').textContent = data.current.condition;
+  document.getElementById('irrHeroHumidity').textContent  = `${data.current.humidity}% humidity`;
+  document.getElementById('irrHeroConditionTag').textContent = data.current.condition;
 
-  document.getElementById('cropName').textContent       = capitalize(data.crop);
-  document.getElementById('cropReason').textContent     = data.crop_reason;
-  document.getElementById('cropConfidence').textContent = `${data.confidence}% match`;
-
-  document.getElementById('cropMeta').innerHTML = (data.crop_tags || [])
-    .map(t => `<span class="crop-tag">${t}</span>`).join('');
-
-  // Alternatives grid
-  const altGrid = document.getElementById('alternativesGrid');
-  altGrid.innerHTML = (data.alternatives || []).map(alt => `
-    <div class="alt-card">
-      <div class="alt-card__header">
-        <span class="alt-crop-name">${capitalize(alt.crop)}</span>
-        <span class="alt-confidence">${alt.confidence}%</span>
-      </div>
-      <div class="alt-tags">
-        ${(alt.tags || []).slice(0, 2).map(t => `<span class="alt-tag">${t}</span>`).join('')}
-      </div>
+  const irr = data.irrigation;
+  document.getElementById('irrAdviceHeader').innerHTML = `
+    <div class="irr-advice-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2C6 9 4 13 4 16a8 8 0 0016 0c0-3-2-7-8-14z"/>
+      </svg>
     </div>
-  `).join('');
-
-  document.getElementById('avgTemp').textContent         = `${data.weather.avg_temp}°C`;
-  document.getElementById('avgHumidity').textContent     = `${data.weather.avg_humidity}%`;
-  document.getElementById('dominantWeather').textContent = data.weather.dominant;
-
-  document.getElementById('weatherBreakdown').innerHTML = (data.weather.breakdown || []).map(b => `
-    <div class="breakdown-row">
-      <span class="breakdown-label">${b.condition}</span>
-      <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${b.pct}%"></div></div>
-      <span class="breakdown-count">${b.days} days</span>
+    <div>
+      <div class="irr-advice-title">${irr.label}</div>
+      <p class="irr-advice-desc">Apply <strong>${irr.amount}</strong> to keep your crops healthy.</p>
     </div>
-  `).join('');
+  `;
 
-  document.getElementById('forecastStrip').innerHTML = (data.weather.forecast || []).slice(0, 7).map(day => `
-    <div class="forecast-day">
-      <div class="fday-label">${day.label}</div>
-      <div class="fday-icon">${getWeatherIcon(day.condition)}</div>
-      <div class="fday-temp">${day.temp}°</div>
-    </div>
-  `).join('');
+  document.getElementById('irrTipsList').innerHTML =
+    (irr.tips || []).map(t => `<li>${t}</li>`).join('');
 
-  document.getElementById('levelFill').style.width  = `${data.irrigation.level_pct}%`;
-  document.getElementById('levelLabel').textContent = data.irrigation.label;
-  document.getElementById('irrigationAmount').innerHTML = data.irrigation.amount
-    ? `<span class="irrigation-amount-value">${data.irrigation.amount}</span>` : '';
-  document.getElementById('irrigationTips').innerHTML = (data.irrigation.tips || [])
-    .map(t => `<li>${t}</li>`).join('');
+  document.getElementById('irr-results').style.display = 'flex';
+  setTimeout(() => document.getElementById('irr-results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
 
-  document.getElementById('reasoningSteps').innerHTML = (data.reasoning_steps || []).map((step, i) => `
-    <div class="reasoning-step">
-      <span class="step-num">${i + 1}</span>
-      <span class="step-text">${step}</span>
-    </div>
-  `).join('');
+function resetIrrigation() {
+  document.getElementById('irr-results').style.display = 'none';
+  document.getElementById('irrLocation').value = '';
+  hideError('irrError');
+  window.scrollTo(0, 0);
 }
 
 // ============================================================
-// RENDER — IRRIGATION-ONLY RESULTS
+// HELPERS
 // ============================================================
-function renderIrrigationResults(data) {
-  const area = document.getElementById('irrigationResultsArea');
-  area.style.display = 'flex';
-  setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-
-  document.getElementById('irrCurrentTemp').textContent      = `${data.current.temp}°C`;
-  document.getElementById('irrCurrentHumidity').textContent  = `${data.current.humidity}%`;
-  document.getElementById('irrCurrentCondition').textContent = data.current.condition;
-
-  document.getElementById('irrLevelFill').style.width  = `${data.irrigation.level_pct}%`;
-  document.getElementById('irrLevelLabel').textContent = data.irrigation.label;
-  document.getElementById('irrAmount').innerHTML = data.irrigation.amount
-    ? `<span class="irrigation-amount-value">${data.irrigation.amount}</span>` : '';
-  document.getElementById('irrTips').innerHTML = (data.irrigation.tips || [])
-    .map(t => `<li>${t}</li>`).join('');
+function setBtnLoading(id, on) {
+  const btn  = document.getElementById(id);
+  const text = btn.querySelector('.btn__text');
+  const load = btn.querySelector('.btn__loader');
+  btn.disabled = on;
+  if (text) text.style.display = on ? 'none' : 'inline-flex';
+  if (load) load.style.display = on ? 'inline-flex' : 'none';
 }
 
-// ============================================================
-// UI STATE HELPERS
-// ============================================================
-function setBtnLoading(btnId, on) {
-  const btn     = document.getElementById(btnId);
-  const btnText = btn.querySelector('.btn-text');
-  const loader  = btn.querySelector('.btn-loader');
-  btn.disabled  = on;
-  btnText.style.display = on ? 'none'   : 'inline';
-  loader.style.display  = on ? 'inline' : 'none';
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
-function showError(message) {
-  let errorEl = document.getElementById('errorBanner');
-  if (!errorEl) {
-    errorEl = document.createElement('div');
-    errorEl.id = 'errorBanner';
-    errorEl.className = 'error-banner';
-    const activeForm = currentMode === 'irrigation'
-      ? document.getElementById('irrigationForm')
-      : document.getElementById('fullForm');
-    activeForm.appendChild(errorEl);
-  } else {
-    // Move banner to currently visible form
-    const activeForm = currentMode === 'irrigation'
-      ? document.getElementById('irrigationForm')
-      : document.getElementById('fullForm');
-    activeForm.appendChild(errorEl);
-  }
-  errorEl.textContent = message;
-  errorEl.style.display = 'block';
+function hideError(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
 }
 
-function hideError() {
-  const errorEl = document.getElementById('errorBanner');
-  if (errorEl) errorEl.style.display = 'none';
-}
-
-// ============================================================
-// UTILITIES
-// ============================================================
 function capitalize(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -321,7 +355,7 @@ function capitalize(str) {
 function getWeatherIcon(condition) {
   const c = (condition || '').toLowerCase();
   if (c.includes('rain'))  return '🌧';
-  if (c.includes('cloud')) return '☁';
-  if (c.includes('clear')) return '☀';
+  if (c.includes('cloud')) return '☁️';
+  if (c.includes('clear')) return '☀️';
   return '🌤';
 }
